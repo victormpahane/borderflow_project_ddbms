@@ -1,0 +1,100 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh:ro
+      - ./scripts/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  depot:
+    build: .
+    depends_on:
+      - postgres
+      - rabbitmq
+    environment:
+      DEPOT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_depot
+      BORDER_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_border
+      PORT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_port
+      DESTINATION_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_destination
+    command: python -m uvicorn services.depot.api.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+
+  border:
+    build: .
+    depends_on:
+      - postgres
+      - rabbitmq
+    environment:
+      DEPOT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_depot
+      BORDER_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_border
+      PORT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_port
+      DESTINATION_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_destination
+    command: python -m uvicorn services.border.api.main:app --host 0.0.0.0 --port 8001
+    ports:
+      - "8001:8001"
+
+  port:
+    build: .
+    depends_on:
+      - postgres
+      - rabbitmq
+    environment:
+      DEPOT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_depot
+      BORDER_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_border
+      PORT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_port
+      DESTINATION_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_destination
+    command: python -m uvicorn services.port.api.main:app --host 0.0.0.0 --port 8002
+    ports:
+      - "8002:8002"
+
+  destination:
+    build: .
+    depends_on:
+      - postgres
+      - rabbitmq
+    environment:
+      DEPOT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_depot
+      BORDER_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_border
+      PORT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_port
+      DESTINATION_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_destination
+    command: python -m uvicorn services.destination.api.main:app --host 0.0.0.0 --port 8003
+    ports:
+      - "8003:8003"
+
+  control-tower:
+    build: .
+    depends_on:
+      - postgres
+      - rabbitmq
+      - depot
+      - border
+      - port
+      - destination
+    environment:
+      DEPOT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_depot
+      BORDER_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_border
+      PORT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_port
+      DESTINATION_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_destination
+      DEPOT_SERVICE_URL: http://depot:8000/health
+      BORDER_SERVICE_URL: http://border:8001/health
+      PORT_SERVICE_URL: http://port:8002/health
+      DESTINATION_SERVICE_URL: http://destination:8003/health
+    command: python -m uvicorn services.controltower.api.main:app --host 0.0.0.0 --port 8010
+    ports:
+      - "8010:8010"
+
+volumes:
+  postgres_data:

@@ -83,6 +83,7 @@ Use the launcher scripts so the project always uses its own virtual environment:
 ./bin/run-border.sh
 ./bin/run-port.sh
 ./bin/run-destination.sh
+./bin/run-control-tower.sh
 ```
 
 Ports:
@@ -91,6 +92,7 @@ Ports:
 - Border: `127.0.0.1:8001`
 - Port: `127.0.0.1:8002`
 - Destination: `127.0.0.1:8003`
+- Control Tower: `127.0.0.1:8010`
 
 ## Event creation
 
@@ -103,6 +105,73 @@ curl -X POST http://127.0.0.1:8000/events/ \
   -H "Content-Type: application/json" \
   -d '{"container_id":"CONT-001","event_type":"ARRIVED","payload":{}}'
 ```
+
+## Control tower
+
+The control tower is a live dashboard and API surface that aggregates all sites:
+
+- `GET /` for the dashboard UI
+- `GET /api/overview` for the full summary payload
+- `GET /api/events` for recent global events
+
+## Docker Compose
+
+Bring up the full stack with:
+
+```bash
+docker compose up --build
+```
+
+That starts:
+
+- PostgreSQL with all four site databases
+- RabbitMQ with the management UI
+- Depot, Border, Port, Destination
+- Control Tower
+
+Control Tower will be available at `http://127.0.0.1:8010`.
+
+## Kubernetes / k3s
+
+Kubernetes manifests are in `infrastructure/k8s`.
+
+Build the image:
+
+```bash
+docker build -t borderflow:latest .
+```
+
+Apply the manifests:
+
+```bash
+kubectl apply -f infrastructure/k8s/namespace.yaml
+kubectl apply -f infrastructure/k8s/configmap.yaml
+kubectl apply -f infrastructure/k8s/postgres-config.yaml
+kubectl apply -f infrastructure/k8s/postgres.yaml
+kubectl apply -f infrastructure/k8s/rabbitmq.yaml
+kubectl apply -f infrastructure/k8s/apps.yaml
+```
+
+The control tower is exposed as a NodePort on `30010`.
+
+You can also apply everything with:
+
+```bash
+kubectl apply -k infrastructure/k8s
+```
+
+## Smoke tests
+
+Run the smoke tests against the live stack with:
+
+```bash
+cd /home/victor/borderflow
+./venv/bin/python -m tests.smoke_test
+```
+
+## Demo guide
+
+A full demonstration guide, including offline simulation and lecturer talking points, is in `DEMO.md`.
 
 ## Architecture notes
 
@@ -118,7 +187,6 @@ The current implementation now aligns more closely with the handout:
 
 Git is required for submission. You still need to:
 
-1. initialize the repository if it is not already initialized
-2. commit the project
-3. create or connect a GitHub remote
-4. push the branch to GitHub
+1. commit the project
+2. create or connect a GitHub remote
+3. push the branch to GitHub

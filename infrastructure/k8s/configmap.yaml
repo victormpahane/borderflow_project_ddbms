@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: borderflow-config
+  namespace: borderflow
+data:
+  DEPOT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_depot
+  BORDER_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_border
+  PORT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_port
+  DESTINATION_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_destination
+  DEPOT_SERVICE_URL: http://depot:8000/health
+  BORDER_SERVICE_URL: http://border:8001/health
+  PORT_SERVICE_URL: http://port:8002/health
+  DESTINATION_SERVICE_URL: http://destination:8003/health
