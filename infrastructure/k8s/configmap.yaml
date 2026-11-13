@@ -4,6 +4,7 @@ metadata:
   name: borderflow-config
   namespace: borderflow
 data:
+  BORDERFLOW_API_KEYS: depot-controller-demo-key:depot_operations_controller,truck-driver-demo-key:truck_driver,yard-clerk-demo-key:yard_depot_clerk,border-liaison-demo-key:border_liaison,port-agent-demo-key:port_agent,management-demo-key:management_compliance,client-demo-key:customer_service_client
   RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
   DEPOT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_depot
   BORDER_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_border

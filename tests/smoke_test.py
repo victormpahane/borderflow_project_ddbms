@@ -6,6 +6,10 @@ import urllib.request
 
 import psycopg2
 
+MANAGEMENT_HEADERS = {"X-API-Key": os.getenv("MANAGEMENT_API_KEY", "management-demo-key")}
+DEPOT_HEADERS = {"X-API-Key": os.getenv("DEPOT_API_KEY", "depot-controller-demo-key")}
+CLIENT_HEADERS = {"X-API-Key": os.getenv("CLIENT_API_KEY", "client-demo-key")}
+
 
 BASE_URLS = {
     "DEPOT": os.getenv("DEPOT_URL", "http://127.0.0.1:8000"),
@@ -23,14 +27,14 @@ DATABASES = {
 }
 
 
-def fetch_json(url: str, method: str = "GET", body: dict | None = None):
+def fetch_json(url: str, method: str = "GET", body: dict | None = None, headers: dict | None = None):
     data = None
-    headers = {}
+    request_headers = dict(headers or {})
     if body is not None:
-      data = json.dumps(body).encode("utf-8")
-      headers["Content-Type"] = "application/json"
+        data = json.dumps(body).encode("utf-8")
+        request_headers["Content-Type"] = "application/json"
 
-    request = urllib.request.Request(url, data=data, headers=headers, method=method)
+    request = urllib.request.Request(url, data=data, headers=request_headers, method=method)
     with urllib.request.urlopen(request, timeout=5) as response:
         return json.loads(response.read().decode("utf-8"))
 
@@ -46,11 +50,17 @@ class BorderFlowSmokeTest(unittest.TestCase):
     def test_health_endpoints(self):
         for site_id, base_url in BASE_URLS.items():
             with self.subTest(site_id=site_id):
-                payload = fetch_json(f"{base_url}/health")
+                payload = fetch_json(f"{base_url}/health", headers=MANAGEMENT_HEADERS)
                 self.assertIn(payload["status"], {"ok", "degraded"})
 
-        overview = fetch_json(f"{CONTROL_TOWER_URL}/api/overview")
+        overview = fetch_json(f"{CONTROL_TOWER_URL}/api/overview", headers=MANAGEMENT_HEADERS)
         self.assertEqual(overview["total_sites"], 4)
+
+    def test_rbac_blocks_missing_api_key(self):
+        request = urllib.request.Request(f"{BASE_URLS['DEPOT']}/health", method="GET")
+        with self.assertRaises(urllib.error.HTTPError) as context:
+            urllib.request.urlopen(request, timeout=5)
+        self.assertEqual(context.exception.code, 401)
 
     def test_event_propagation(self):
         container_id = f"SMOKE-{int(time.time())}"
@@ -63,6 +73,7 @@ class BorderFlowSmokeTest(unittest.TestCase):
                 "event_type": "ARRIVED",
                 "payload": {"source": "smoke-test"},
             },
+            headers=DEPOT_HEADERS,
         )
         self.assertEqual(response["message"], "event created")
 
@@ -84,6 +95,13 @@ class BorderFlowSmokeTest(unittest.TestCase):
             time.sleep(1)
         else:
             self.fail("Event did not propagate to destination within 15 seconds")
+
+        tracking = fetch_json(
+            f"{CONTROL_TOWER_URL}/api/tracking/{container_id}",
+            headers=CLIENT_HEADERS,
+        )
+        self.assertEqual(tracking["container_id"], container_id)
+        self.assertGreaterEqual(len(tracking["timeline"]), 1)
 
 
 if __name__ == "__main__":

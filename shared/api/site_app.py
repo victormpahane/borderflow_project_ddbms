@@ -1,9 +1,16 @@
 import json
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy import text
 
+from shared.auth.rbac import (
+    AuthContext,
+    EVENT_CREATORS,
+    INTERNAL_READERS,
+    require_actors,
+    validate_event_permission,
+)
 from shared.db.session import get_database_health, get_session
 from shared.messaging.health import get_rabbitmq_health
 from shared.messaging.outbox import start_outbox_worker
@@ -19,11 +26,11 @@ def build_site_app(site_id: str):
         return f"{normalized_site_id.lower()}-{int(datetime.now(timezone.utc).timestamp() * 1000)}"
 
     @app.get("/")
-    def root():
+    def root(auth: AuthContext = Depends(require_actors(*INTERNAL_READERS))):
         return {"status": f"{normalized_site_id} service running"}
 
     @app.get("/health")
-    def health():
+    def health(auth: AuthContext = Depends(require_actors(*INTERNAL_READERS))):
         db = get_session(normalized_site_id)
         try:
             pending_outbox = db.execute(
@@ -44,6 +51,7 @@ def build_site_app(site_id: str):
         return {
             "status": status,
             "service": normalized_site_id,
+            "actor": auth.actor,
             "database": db_health,
             "rabbitmq": rabbitmq_health,
             "outbox": {
@@ -53,14 +61,18 @@ def build_site_app(site_id: str):
         }
 
     @app.post("/events/")
-    def create_event(request: CreateEventRequest):
+    def create_event(
+        request: CreateEventRequest,
+        auth: AuthContext = Depends(require_actors(*EVENT_CREATORS)),
+    ):
         db = get_session(normalized_site_id)
+        normalized_event_type = validate_event_permission(auth.actor, request.event_type)
 
         event = Event(
             event_id=next_event_id(),
             container_id=request.container_id,
             site_id=normalized_site_id,
-            event_type=request.event_type,
+            event_type=normalized_event_type,
             timestamp=datetime.now(timezone.utc),
             payload=request.payload,
             sync_status="PENDING",
@@ -131,6 +143,7 @@ def build_site_app(site_id: str):
                 "message": "event created",
                 "event": event,
                 "sync_status": final_sync_status,
+                "performed_by_actor": auth.actor,
             }
 
         except Exception as exc:
