@@ -4,6 +4,7 @@ metadata:
   name: borderflow-config
   namespace: borderflow
 data:
+  RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
   DEPOT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_depot
   BORDER_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_border
   PORT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_port

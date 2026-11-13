@@ -1,7 +1,9 @@
+import os
+
 import pika
 
 
-RABBITMQ_URL = "amqp://guest:guest@127.0.0.1:5672/"
+RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@127.0.0.1:5672/")
 
 
 def get_rabbitmq_health():

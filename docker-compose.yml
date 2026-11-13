@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
     ports:
-      - "5432:5432"
+      - "55432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./infrastructure/postgres/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh:ro
@@ -15,8 +15,8 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "55672:5672"
+      - "15673:15672"
 
   depot:
     build: .
@@ -24,6 +24,7 @@ services:
       - postgres
       - rabbitmq
     environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
       DEPOT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_depot
       BORDER_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_border
       PORT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_port
@@ -38,6 +39,7 @@ services:
       - postgres
       - rabbitmq
     environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
       DEPOT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_depot
       BORDER_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_border
       PORT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_port
@@ -52,6 +54,7 @@ services:
       - postgres
       - rabbitmq
     environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
       DEPOT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_depot
       BORDER_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_border
       PORT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_port
@@ -66,6 +69,7 @@ services:
       - postgres
       - rabbitmq
     environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
       DEPOT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_depot
       BORDER_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_border
       PORT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_port
@@ -84,6 +88,7 @@ services:
       - port
       - destination
     environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
       DEPOT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_depot
       BORDER_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_border
       PORT_DATABASE_URL: postgresql://bf_user:bf_password@postgres:5432/borderflow_port

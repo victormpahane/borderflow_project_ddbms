@@ -26,6 +26,14 @@ data:
     SQL
 
       psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "${db}" -f /docker-entrypoint-initdb.d/schema.sql
+      psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "${db}" <<'SQL'
+    ALTER SCHEMA public OWNER TO bf_user;
+    GRANT USAGE, CREATE ON SCHEMA public TO bf_user;
+    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO bf_user;
+    GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO bf_user;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO bf_user;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO bf_user;
+    SQL
     done
   schema.sql: |
     CREATE TABLE IF NOT EXISTS events (
@@ -62,3 +70,9 @@ data:
         payload JSONB NOT NULL,
         received_at TIMESTAMPTZ NOT NULL
     );
+
+    GRANT USAGE, CREATE ON SCHEMA public TO bf_user;
+    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO bf_user;
+    GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO bf_user;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO bf_user;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO bf_user;

@@ -1,12 +1,14 @@
-import pika
 import json
+import os
 import threading
+
+import pika
 from sqlalchemy import text
 
 from shared.db.session import get_session
 from shared.models.event import Event
 
-RABBITMQ_URL = "amqp://guest:guest@127.0.0.1:5672/"
+RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@127.0.0.1:5672/")
 
 
 def start_consumer(site_id: str):

@@ -1,8 +1,10 @@
 import json
+import os
+
 import pika
 from shared.models.event import Event
 
-RABBITMQ_URL = "amqp://guest:guest@127.0.0.1:5672/"
+RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@127.0.0.1:5672/")
 
 
 def publish_raw_event(routing_key: str, body: str):
