@@ -32,7 +32,21 @@ docker compose up --build
 Open the control tower:
 
 ```text
-http://127.0.0.1:8010
+http://127.0.0.1:8010/?api_key=management-demo-key
+```
+
+Compose host ports:
+
+- PostgreSQL: `127.0.0.1:55432`
+- RabbitMQ: `127.0.0.1:55672`
+- RabbitMQ management UI: `127.0.0.1:15673`
+
+If you run `psql` from the host while Compose is up, use `55432` in the connection string.
+
+Open the client tracking page:
+
+```text
+http://127.0.0.1:8010/tracking?api_key=client-demo-key
 ```
 
 ## 2. Baseline health demo
@@ -40,11 +54,11 @@ http://127.0.0.1:8010
 Show that every site is alive:
 
 ```bash
-curl http://127.0.0.1:8000/health
-curl http://127.0.0.1:8001/health
-curl http://127.0.0.1:8002/health
-curl http://127.0.0.1:8003/health
-curl http://127.0.0.1:8010/health
+curl -H "X-API-Key: management-demo-key" http://127.0.0.1:8000/health
+curl -H "X-API-Key: management-demo-key" http://127.0.0.1:8001/health
+curl -H "X-API-Key: management-demo-key" http://127.0.0.1:8002/health
+curl -H "X-API-Key: management-demo-key" http://127.0.0.1:8003/health
+curl -H "X-API-Key: management-demo-key" http://127.0.0.1:8010/health
 ```
 
 What to point out:
@@ -60,6 +74,7 @@ Create an event at Depot:
 
 ```bash
 curl -i -X POST http://127.0.0.1:8000/events/ \
+  -H "X-API-Key: depot-controller-demo-key" \
   -H "Content-Type: application/json" \
   -d '{"container_id":"CONT-001","event_type":"ARRIVED","payload":{"operator":"demo"}}'
 ```
@@ -69,14 +84,14 @@ Then verify:
 ### Depot local write
 
 ```bash
-psql "postgresql://bf_user:bf_password@127.0.0.1:5432/borderflow_depot" \
+psql "postgresql://bf_user:bf_password@127.0.0.1:55432/borderflow_depot" \
   -c "select event_id, container_id, site_id, event_type, sync_status from events order by timestamp desc limit 5;"
 ```
 
 ### Destination replicated receive
 
 ```bash
-psql "postgresql://bf_user:bf_password@127.0.0.1:5432/borderflow_destination" \
+psql "postgresql://bf_user:bf_password@127.0.0.1:55432/borderflow_destination" \
   -c "select event_id, source_site_id, received_at from inbox_events order by received_at desc limit 5;"
 ```
 
@@ -110,6 +125,7 @@ Now create an event at Depot:
 
 ```bash
 curl -i -X POST http://127.0.0.1:8000/events/ \
+  -H "X-API-Key: depot-controller-demo-key" \
   -H "Content-Type: application/json" \
   -d '{"container_id":"CONT-OFFLINE-1","event_type":"HELD","payload":{"reason":"destination offline demo"}}'
 ```
@@ -117,7 +133,7 @@ curl -i -X POST http://127.0.0.1:8000/events/ \
 Verify:
 
 ```bash
-psql "postgresql://bf_user:bf_password@127.0.0.1:5432/borderflow_depot" \
+psql "postgresql://bf_user:bf_password@127.0.0.1:55432/borderflow_depot" \
   -c "select event_id, container_id, site_id, event_type, sync_status from events order by timestamp desc limit 5;"
 ```
 
@@ -137,7 +153,7 @@ cd /home/victor/borderflow
 Then verify destination catches up:
 
 ```bash
-psql "postgresql://bf_user:bf_password@127.0.0.1:5432/borderflow_destination" \
+psql "postgresql://bf_user:bf_password@127.0.0.1:55432/borderflow_destination" \
   -c "select event_id, source_site_id, received_at from inbox_events order by received_at desc limit 5;"
 ```
 
@@ -159,6 +175,7 @@ Create an event at Depot:
 
 ```bash
 curl -i -X POST http://127.0.0.1:8000/events/ \
+  -H "X-API-Key: depot-controller-demo-key" \
   -H "Content-Type: application/json" \
   -d '{"container_id":"CONT-OFFLINE-2","event_type":"DELAYED","payload":{"reason":"mq offline demo"}}'
 ```
@@ -166,7 +183,7 @@ curl -i -X POST http://127.0.0.1:8000/events/ \
 Now inspect Depot outbox:
 
 ```bash
-psql "postgresql://bf_user:bf_password@127.0.0.1:5432/borderflow_depot" \
+psql "postgresql://bf_user:bf_password@127.0.0.1:55432/borderflow_depot" \
   -c "select event_id, status, routing_key, created_at, sent_at from outbox_events order by created_at desc limit 5;"
 ```
 
@@ -184,7 +201,7 @@ docker compose start rabbitmq
 Wait a few seconds, then inspect again:
 
 ```bash
-psql "postgresql://bf_user:bf_password@127.0.0.1:5432/borderflow_depot" \
+psql "postgresql://bf_user:bf_password@127.0.0.1:55432/borderflow_depot" \
   -c "select event_id, status, routing_key, created_at, sent_at from outbox_events order by created_at desc limit 5;"
 ```
 
@@ -204,7 +221,7 @@ What to say:
 Open:
 
 ```text
-http://127.0.0.1:8010
+http://127.0.0.1:8010/?api_key=management-demo-key
 ```
 
 Point out:
@@ -213,12 +230,14 @@ Point out:
 - total events
 - pending outbox pressure
 - live recent event feed
+- separate dedicated dashboards for Depot, Border, Port, and Destination
 
 Useful API views:
 
 ```bash
-curl http://127.0.0.1:8010/api/overview
-curl http://127.0.0.1:8010/api/events
+curl -H "X-API-Key: management-demo-key" http://127.0.0.1:8010/api/overview
+curl -H "X-API-Key: management-demo-key" http://127.0.0.1:8010/api/events
+curl -H "X-API-Key: client-demo-key" http://127.0.0.1:8010/api/tracking/CONT-001
 ```
 
 ## 6. Smoke test demo
@@ -248,12 +267,7 @@ docker build -t borderflow:latest .
 Apply manifests:
 
 ```bash
-kubectl apply -f infrastructure/k8s/namespace.yaml
-kubectl apply -f infrastructure/k8s/configmap.yaml
-kubectl apply -f infrastructure/k8s/postgres-config.yaml
-kubectl apply -f infrastructure/k8s/postgres.yaml
-kubectl apply -f infrastructure/k8s/rabbitmq.yaml
-kubectl apply -f infrastructure/k8s/apps.yaml
+kubectl apply -k infrastructure/k8s
 ```
 
 Verify:
